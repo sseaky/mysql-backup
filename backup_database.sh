@@ -6,6 +6,7 @@
 TIME=`date +%y%m%d%H%M%S`
 
 SOURCE_IP='database.address'
+SOURCE_PORT=3306
 SOURCE_DB='database.name'
 SOURCE_USER='database.user'
 SOURCE_PASS='database.pass'
@@ -30,6 +31,7 @@ KEEP_BY=2
 
 # dump the data to backup server
 TARGET_IP=''
+TARGET_PORT=3306
 TARGET_DB=''
 TARGET_USER=''
 TARGET_PASS=''
@@ -58,7 +60,7 @@ backup_from_source() {
     log "\nDump database '$SOURCE_DB' on '$SOURCE_IP' to '$BACKUP_FILE'"
     [[ $TABLES ]] && log "  tables: $TABLES"
     # --set-gtid-purged=OFF
-    dump_cmd="mysqldump --single-transaction --quick -h $SOURCE_IP -u $SOURCE_USER $SOURCE_DB $TABLES"
+    dump_cmd="mysqldump --single-transaction --quick -h $SOURCE_IP -P $SOURCE_PORT -u $SOURCE_USER $SOURCE_DB $TABLES"
     if $SSH_TUNNEL; then
         cmd="ssh -p $SOURCE_SSH_PORT -i $SOURCE_SSH_KEY ${SOURCE_SSH_USER}@${SOURCE_SSH_HOST} 'export MYSQL_PWD=$SOURCE_PASS;$dump_cmd' > $BACKUP_FILE"
     else
@@ -96,7 +98,7 @@ delete_target_db() {
         do
             drop_sql=$drop_sql"DROP TABLE IF EXISTS $tb;"
         done
-        cmd="mysql -h $TARGET_IP -u $TARGET_USER $TARGET_DB -e '$drop_sql'"
+        cmd="mysql -h $TARGET_IP -P $TARGET_PORT -u $TARGET_USER $TARGET_DB -e '$drop_sql'"
         exec_cmd $cmd
         unset MYSQL_PWD
     fi
@@ -115,7 +117,7 @@ compress_earlier() {
 import_to_target_db() {
     log "\nImport '$BACKUP_FILE' to '$TARGET_DB' on '$TARGET_IP'"
     export MYSQL_PWD=$TARGET_PASS
-    cmd="mysql -h $TARGET_IP -u $TARGET_USER $TARGET_DB < $BACKUP_FILE"
+    cmd="mysql -h $TARGET_IP -P $TARGET_PORT -u $TARGET_USER $TARGET_DB < $BACKUP_FILE"
     exec_cmd $cmd
     unset MYSQL_PWD
 }
@@ -123,7 +125,7 @@ import_to_target_db() {
 call_target_func() {
     log "\nCall '$1' to '$TARGET_DB' on '$TARGET_IP'"
     export MYSQL_PWD=$TARGET_PASS
-    cmd="mysql -h $TARGET_IP -u $TARGET_USER $TARGET_DB -e 'CALL $1()'"
+    cmd="mysql -h $TARGET_IP -P $TARGET_PORT -u $TARGET_USER $TARGET_DB -e 'CALL $1()'"
     exec_cmd $cmd
     unset MYSQL_PWD
 }
