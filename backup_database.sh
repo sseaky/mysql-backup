@@ -67,7 +67,12 @@ backup_from_source() {
         export MYSQL_PWD=$SOURCE_PASS
         cmd=$dump_cmd" > $BACKUP_FILE"
     fi
-    exec_cmd $cmd
+    exec_cmd $cmd" 2> error.log"
+    if [[ -n $(cat error.log) ]]; then
+        echo "backup $BACKUP_FILE fail. $(cat error.log)" |& tee -a $LOG_FILE
+        rm $BACKUP_FILE
+        exit 1
+    fi
     unset MYSQL_PWD
 }
 
